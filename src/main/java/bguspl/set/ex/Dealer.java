@@ -2,6 +2,9 @@ package bguspl.set.ex;
 
 import bguspl.set.Env;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
@@ -38,11 +41,21 @@ public class Dealer implements Runnable {
      */
     private long reshuffleTime = Long.MAX_VALUE;
 
+
     public Dealer(Env env, Table table, Player[] players) {
         this.env = env;
         this.table = table;
         this.players = players;
         deck = IntStream.range(0, env.config.deckSize).boxed().collect(Collectors.toList());
+       /* if(env.config.turnTimeoutMillis > 0){
+            reshuffleTime = System.currentTimeMillis() + env.config.turnTimeoutMillis;
+        }
+        else if(env.config.turnTimeoutMillis == 0){
+            //timer go up (since last action)
+        }
+        else {
+            //no timer
+        }*/
     }
 
     /**
@@ -54,7 +67,7 @@ public class Dealer implements Runnable {
         while (!shouldFinish()) {
             placeCardsOnTable();
             timerLoop();
-            updateTimerDisplay(false);
+            updateTimerDisplay(true, env.config.turnTimeoutMillis);
             removeAllCardsFromTable();
         }
         announceWinners();
@@ -65,9 +78,11 @@ public class Dealer implements Runnable {
      * The inner loop of the dealer thread that runs as long as the countdown did not time out.
      */
     private void timerLoop() {
+        long timeFromStartMillis = System.currentTimeMillis();
+        reshuffleTime = timeFromStartMillis + env.config.turnTimeoutMillis;
         while (!terminate && System.currentTimeMillis() < reshuffleTime) {
-            sleepUntilWokenOrTimeout();
-            updateTimerDisplay(false);
+            sleepUntilWokenOrTimeout(reshuffleTime);
+            updateTimerDisplay(false, reshuffleTime - System.currentTimeMillis());
             removeCardsFromTable();
             placeCardsOnTable();
         }
@@ -78,6 +93,7 @@ public class Dealer implements Runnable {
      */
     public void terminate() {
         // TODO implement
+        terminate = true;
     }
 
     /**
@@ -106,15 +122,23 @@ public class Dealer implements Runnable {
     /**
      * Sleep for a fixed amount of time or until the thread is awakened for some purpose.
      */
-    private void sleepUntilWokenOrTimeout() {
+    private void sleepUntilWokenOrTimeout(long reshuffleTimeMillis) {
         // TODO implement
+        synchronized (this){
+            try {
+                wait(reshuffleTimeMillis - System.currentTimeMillis());
+            }
+            catch(InterruptedException ex){}
+        }
     }
 
     /**
      * Reset and/or update the countdown and the countdown display.
      */
-    private void updateTimerDisplay(boolean reset) {
+    private void updateTimerDisplay(boolean reset, long timeLeftMillis) {
         // TODO implement
+        // what is da diff reset == true/false?
+        env.ui.setCountdown(timeLeftMillis, timeLeftMillis < env.config.turnTimeoutWarningMillis);
     }
 
     /**
@@ -129,5 +153,15 @@ public class Dealer implements Runnable {
      */
     private void announceWinners() {
         // TODO implement
+//        int max = Arrays.stream(players).max(Comparator.comparingInt(p -> p.getScore())).get().getScore();
+        int max = Arrays.stream(players)
+                        .mapToInt(Player::getScore)
+                        .max()
+                        .orElse(-1);
+        int[] maxPlayers = Arrays.stream(players)
+                                .filter(p -> p.getScore()==max)
+                                .mapToInt(p -> p.id)
+                                .toArray();
+        env.ui.announceWinner(maxPlayers);
     }
 }
