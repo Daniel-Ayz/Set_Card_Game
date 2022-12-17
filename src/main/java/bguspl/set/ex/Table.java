@@ -2,6 +2,7 @@ package bguspl.set.ex;
 
 import bguspl.set.Env;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -30,6 +31,11 @@ public class Table {
     protected final Integer[] cardToSlot; // slot per card (if any)
 
     /**
+    * Mapping between playerId to his 0-3 token (represented by their slotId on which they are)
+    */
+    private List<Integer>[] playerTokens;
+
+    /**
      * Constructor for testing.
      *
      * @param env        - the game environment objects.
@@ -49,8 +55,11 @@ public class Table {
      * @param env - the game environment objects.
      */
     public Table(Env env) {
-
         this(env, new Integer[env.config.tableSize], new Integer[env.config.deckSize]);
+        playerTokens = new ArrayList[env.config.players];
+        for(int i=0; i<playerTokens.length;i++){
+            playerTokens[i] = new ArrayList<>(3);
+        }
     }
 
     /**
@@ -102,7 +111,7 @@ public class Table {
      * Removes a card from a grid slot on the table.
      * @param slot - the slot from which to remove the card.
      */
-    public void removeCard(int slot) {
+    public int removeCard(int slot) {
         try {
             Thread.sleep(env.config.tableDelayMillis);
         } catch (InterruptedException ignored) {}
@@ -112,6 +121,28 @@ public class Table {
         cardToSlot[card] = null;
         slotToCard[slot] = null;
         env.ui.removeCard(slot);
+        return card;
+    }
+
+    public Integer[] removeAllCardsAndReturn(){
+        Integer[] cards = new Integer[countCards()];
+        int i = 0;
+        for(Integer slot:slotToCard){
+            if(slot != null){
+                cards[i++] = removeCard(slot);
+            }
+        }
+        return cards;
+    }
+
+    public List<Integer> getEmptySlots(){
+        List<Integer> emptySlots = new ArrayList<>(env.config.tableSize - countCards());
+        for(int i=0; i<slotToCard.length;i++){
+            if(slotToCard[i] == null){
+                emptySlots.add(i);
+            }
+        }
+        return emptySlots;
     }
 
     /**
@@ -121,7 +152,10 @@ public class Table {
      */
     public void placeToken(int player, int slot) {
         // TODO implement
-        env.ui.placeToken(player, slot);
+        if(tokenCount(player) < 3){
+            playerTokens[player].add(slot);
+            env.ui.placeToken(player, slot);
+        }
     }
 
     /**
@@ -130,10 +164,25 @@ public class Table {
      * @param slot   - the slot from which to remove the token.
      * @return       - true iff a token was successfully removed.
      */
-    public boolean removeToken(int player, int slot) {
+    public boolean removeToken(int player, Integer slot) {
         // TODO implement
-        env.ui.removeToken(player, slot);
-        //TODO return true?
+        boolean removed = playerTokens[player].remove(slot);
+        if(removed){
+            env.ui.removeToken(player, slot);
+            return true;
+        }
         return false;
+    }
+
+    public boolean checkToken(int player, int slot){
+        return playerTokens[player].contains(slot);
+    }
+
+    public int tokenCount(int player){
+        return playerTokens[player].size();
+    }
+
+    public List<Integer> getSet(int playerId){
+        return playerTokens[playerId];
     }
 }

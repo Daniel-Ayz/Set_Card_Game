@@ -2,10 +2,8 @@ package bguspl.set.ex;
 
 import bguspl.set.Env;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -41,12 +39,17 @@ public class Dealer implements Runnable {
      */
     private long reshuffleTime = Long.MAX_VALUE;
 
+    private ConcurrentLinkedQueue<Integer> playerWithSet;
+
+    private volatile boolean dealerShuffle;
+
 
     public Dealer(Env env, Table table, Player[] players) {
         this.env = env;
         this.table = table;
         this.players = players;
         deck = IntStream.range(0, env.config.deckSize).boxed().collect(Collectors.toList());
+        dealerShuffle = false;
        /* if(env.config.turnTimeoutMillis > 0){
             reshuffleTime = System.currentTimeMillis() + env.config.turnTimeoutMillis;
         }
@@ -69,6 +72,7 @@ public class Dealer implements Runnable {
             timerLoop();
             updateTimerDisplay(true, env.config.turnTimeoutMillis);
             removeAllCardsFromTable();
+            shuffleDeck();
         }
         announceWinners();
         env.logger.log(Level.INFO, "Thread " + Thread.currentThread().getName() + " terminated.");
@@ -81,9 +85,9 @@ public class Dealer implements Runnable {
         long timeFromStartMillis = System.currentTimeMillis();
         reshuffleTime = timeFromStartMillis + env.config.turnTimeoutMillis;
         while (!terminate && System.currentTimeMillis() < reshuffleTime) {
-            sleepUntilWokenOrTimeout(reshuffleTime);
+            sleepUntilWokenOrTimeout();
             updateTimerDisplay(false, reshuffleTime - System.currentTimeMillis());
-            removeCardsFromTable();
+            checkSet();
             placeCardsOnTable();
         }
     }
@@ -108,25 +112,52 @@ public class Dealer implements Runnable {
     /**
      * Checks cards should be removed from the table and removes them.
      */
-    private void removeCardsFromTable() {
+    private void checkSet() {
         // TODO implement
+        if(!playerWithSet.isEmpty()) {
+            Integer playerId = playerWithSet.remove();
+            List<Integer> set = table.getSet(playerId);
+            if(set.size() == 3){
+                //if the set is correct
+                if(env.util.testSet(set.stream().mapToInt(Integer::intValue).toArray())){
+                    for(int slot: set){
+                        table.removeCard(slot);
+                        for(Player player: players){
+                            table.removeToken(player.id, slot);
+                        }
+                    }
+                    //freeze and increment score
+                }
+                //false set
+                else{
+                    //penalty time
+                }
+            }
+        }
     }
 
     /**
      * Check if any cards can be removed from the deck and placed on the table.
      */
     private void placeCardsOnTable() {
-        // TODO implement
+        List<Integer> emptySlots = table.getEmptySlots();
+        while(!deck.isEmpty() && !emptySlots.isEmpty()){
+                table.placeCard(deck.remove(0), emptySlots.remove(0));
+        }
+    }
+
+    private void setDealerShuffle(boolean shuffleState){
+        dealerShuffle = shuffleState;
     }
 
     /**
      * Sleep for a fixed amount of time or until the thread is awakened for some purpose.
      */
-    private void sleepUntilWokenOrTimeout(long reshuffleTimeMillis) {
+    private void sleepUntilWokenOrTimeout() {
         // TODO implement
         synchronized (this){
             try {
-                wait(reshuffleTimeMillis - System.currentTimeMillis());
+                wait(800);
             }
             catch(InterruptedException ex){}
         }
@@ -146,6 +177,14 @@ public class Dealer implements Runnable {
      */
     private void removeAllCardsFromTable() {
         // TODO implement
+        Integer[] cards = table.removeAllCardsAndReturn();
+        for(Integer card: cards){
+            deck.add(card);
+        }
+    }
+
+    private void shuffleDeck(){
+        Collections.shuffle(deck);
     }
 
     /**
@@ -153,7 +192,6 @@ public class Dealer implements Runnable {
      */
     private void announceWinners() {
         // TODO implement
-//        int max = Arrays.stream(players).max(Comparator.comparingInt(p -> p.getScore())).get().getScore();
         int max = Arrays.stream(players)
                         .mapToInt(Player::getScore)
                         .max()
@@ -163,5 +201,9 @@ public class Dealer implements Runnable {
                                 .mapToInt(p -> p.id)
                                 .toArray();
         env.ui.announceWinner(maxPlayers);
+    }
+
+    public void enterPlayerWithSet(int playerId){
+        playerWithSet.add(playerId);
     }
 }

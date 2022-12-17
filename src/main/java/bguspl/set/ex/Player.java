@@ -1,5 +1,7 @@
 package bguspl.set.ex;
 
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.logging.Level;
 
 import bguspl.set.Env;
@@ -52,6 +54,10 @@ public class Player implements Runnable {
      */
     private int score;
 
+    private ArrayBlockingQueue<Integer> keyPressed;
+
+    private Dealer dealer;
+
     /**
      * The class constructor.
      *
@@ -66,6 +72,8 @@ public class Player implements Runnable {
         this.table = table;
         this.id = id;
         this.human = human;
+        this.dealer = dealer;
+        keyPressed = new ArrayBlockingQueue<Integer>(3);
     }
 
     /**
@@ -78,7 +86,9 @@ public class Player implements Runnable {
         if (!human) createArtificialIntelligence();
 
         while (!terminate) {
-            // TODO implement main player loop
+            //if dealer is shuffling go to sleep(wait)
+            //after end of sleep - clear key queue
+            PlaceRemoveToken();
         }
         if (!human) try { aiThread.join(); } catch (InterruptedException ignored) {}
         env.logger.log(Level.INFO, "Thread " + Thread.currentThread().getName() + " terminated.");
@@ -108,6 +118,27 @@ public class Player implements Runnable {
      */
     public void terminate() {
         // TODO implement
+        terminate = true;
+    }
+
+    private void PlaceRemoveToken(){
+        try{
+            Integer slot = keyPressed.take();
+            if(table.checkToken(id,slot)) {
+                table.removeToken(id, slot);
+            }
+            else{
+                int tokenCount = table.tokenCount(id);
+                if(tokenCount < 3) {
+                    table.placeToken(id, slot);
+                    if(tokenCount == 2){
+                        dealer.enterPlayerWithSet(id);
+                        dealer.notifyAll();
+                    }
+                }
+            }
+        }
+        catch(InterruptedException ex){};
     }
 
     /**
@@ -117,6 +148,10 @@ public class Player implements Runnable {
      */
     public void keyPressed(int slot) {
         // TODO implement
+        try{
+            keyPressed.put(slot);
+        }
+        catch(InterruptedException ex){};
     }
 
     /**
