@@ -55,7 +55,7 @@ class TableTest {
         }
     }
 
-    private void placeSomeCardsAndAssert() {
+    private void placeSomeCardsAndAssert() throws InterruptedException {
         table.placeCard(8, 2);
 
         assertEquals(8, (int) slotToCard[2]);
@@ -83,19 +83,21 @@ class TableTest {
     }
 
     @Test
-    void placeCard_SomeSlotsAreFilled() {
+    void placeCard_SomeSlotsAreFilled() throws InterruptedException {
 
         fillSomeSlots();
         placeSomeCardsAndAssert();
     }
 
     @Test
-    void placeCard_AllSlotsAreFilled() {
+    void placeCard_AllSlotsAreFilled() throws InterruptedException {
         fillAllSlots();
         placeSomeCardsAndAssert();
     }
 
     static class MockUserInterface implements UserInterface {
+        @Override
+        public void dispose() {}
         @Override
         public void placeCard(int card, int slot) {}
         @Override
@@ -140,6 +142,9 @@ class TableTest {
         public List<int[]> findSets(List<Integer> deck, int count) {
             return null;
         }
+
+        @Override
+        public void spin() {}
     }
 
     static class MockLogger extends Logger {

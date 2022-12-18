@@ -16,6 +16,12 @@ import java.util.logging.Logger;
 public class Config {
 
     /**
+     * Random spin cycles for Config::randomSpin (for debugging / testing)
+     */
+    public final long randomSpinMin;
+    public final long randomSpinMax;
+
+    /**
      * The number of features on the cards (e.g. shape, color etc.)
      */
     public final int featureCount;
@@ -76,6 +82,11 @@ public class Config {
     public final long tableDelayMillis;
 
     /**
+     * The number of milliseconds to pause at the end of the game before closing
+     */
+    public final long endGamePauseMillies;
+
+    /**
      * The names of the players to display on the screen
      * Note: if there are more players than names, the remaining players will be called "Player 3", "Player 4", etc.
      */
@@ -109,12 +120,12 @@ public class Config {
     /**
      * The Width (in pixeks) of player name cell
      */
-    public final int PlayerCellWidth;
+    public final int playerCellWidth;
 
     /**
      * The Height (in pixeks) of player name cell
      */
-    public final int PlayerCellHeight;
+    public final int playerCellHeight;
 
     /**
      * The size of the displayed font
@@ -148,15 +159,17 @@ public class Config {
 
         Properties properties = new Properties();
 
-        try (InputStream is = Files.newInputStream(Paths.get(filename))) {
+        if (filename == null || filename.isEmpty())
+            logger.severe("Running with default configuration.");
+        else try (InputStream is = Files.newInputStream(Paths.get(filename))) {
             properties.load(is);
         } catch (IOException e) {
-            logger.log(Level.INFO, "cannot read configuration file " + filename + " trying from resources.");
+            logger.severe("cannot read configuration file " + filename + " trying from resources.");
             try (InputStream is = Config.class.getClassLoader().getResourceAsStream(filename)) {
                 properties.load(is);
-                logger.log(Level.INFO, "configuration file was loaded from resources directory.");
+                logger.severe("configuration file was loaded from resources directory.");
             } catch (IOException | InvalidPathException ex) {
-                logger.log(Level.WARNING, "cannot read config file from the resources directory either. Using defaults.");
+                logger.severe("warning: cannot read config file from the resources directory either. Using defaults.");
             }
         }
 
@@ -169,7 +182,18 @@ public class Config {
 
     public Config(Logger logger, Properties properties) {
 
-        // cards data
+        // logger settings
+        Level logLevel = Level.parse(properties.getProperty("LogLevel", "ALL"));
+        String logFormat = properties.getProperty("LogFormat", "[%1$tT.%1$tL] [%2$-7s] %3$s%n");
+        Main.setLoggerLevelAndFormat(logger, logLevel, logFormat);
+
+        // for debugging
+        randomSpinMin = Long.parseLong(properties.getProperty("RandomSpinMin", "0"));
+        randomSpinMax = Long.parseLong(properties.getProperty("RandomSpinMax", "0"));
+        if (randomSpinMax < randomSpinMin || randomSpinMin < 0)
+            logger.severe("invalid random spin cycles: max: " + randomSpinMax + " min: " + randomSpinMin);
+
+        // cards settings
         featureSize = Integer.parseInt(properties.getProperty("FeatureSize", "3"));
         featureCount = Integer.parseInt(properties.getProperty("FeatureCount", "4"));
         deckSize = (int) Math.pow(featureSize, featureCount);
@@ -185,8 +209,9 @@ public class Config {
         pointFreezeMillis = (long) (Double.parseDouble(properties.getProperty("PointFreezeSeconds", "1")) * 1000.0);
         penaltyFreezeMillis = (long) (Double.parseDouble(properties.getProperty("PenaltyFreezeSeconds", "3")) * 1000.0);
         tableDelayMillis = (long) (Double.parseDouble(properties.getProperty("TableDelaySeconds", "0.1")) * 1000.0);
+        endGamePauseMillies = (long) (Double.parseDouble(properties.getProperty("EndGamePauseSeconds", "5")) * 1000.0);
 
-        // ui data
+        // ui settings
         String[] names = properties.getProperty("PlayerNames", "Player 1, Player 2").split(",");
         playerNames = new String[players];
         Arrays.setAll(playerNames, i -> i < names.length ? names[i].trim() : "Player " + (i + 1));
@@ -196,8 +221,8 @@ public class Config {
         tableSize = rows * columns;
         cellWidth = Integer.parseInt(properties.getProperty("CellWidth", "258"));
         cellHeight = Integer.parseInt(properties.getProperty("CellHeight", "167"));
-        PlayerCellWidth = Integer.parseInt(properties.getProperty("PlayerCellWidth", "300"));
-        PlayerCellHeight = Integer.parseInt(properties.getProperty("PlayerCellHeight", "40"));
+        playerCellWidth = Integer.parseInt(properties.getProperty("PlayerCellWidth", "300"));
+        playerCellHeight = Integer.parseInt(properties.getProperty("PlayerCellHeight", "40"));
         fontSize = Integer.parseInt(properties.getProperty("FontSize", "40"));
 
         // keyboard input data
@@ -209,7 +234,7 @@ public class Config {
             if (playerKeysString.length() > 0) {
                 String[] codes = playerKeysString.split(",");
                 if (codes.length != tableSize)
-                    logger.log(Level.WARNING, "player " + (i + 1) + " keys (" + codes.length + ") mismatch table size (" + tableSize + ").");
+                    logger.severe("warning: player " + (i + 1) + " keys (" + codes.length + ") mismatch table size (" + tableSize + ").");
                 for (int j = 0; j < Math.min(codes.length, tableSize); ++j) // parse the key codes string
                     playerKeys[i][j] = Integer.parseInt(codes[j]);
             }

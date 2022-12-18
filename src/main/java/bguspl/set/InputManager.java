@@ -4,30 +4,37 @@ import bguspl.set.ex.Player;
 
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.util.logging.Level;
+import java.util.Arrays;
+import java.util.logging.Logger;
 
 /**
  * This class handles the input from the keyboard, translates it to table grid slots and dispatches accordingly.
  */
 class InputManager extends KeyAdapter {
 
-    private final static int MAX_KEY_CODE = 255;
+    private static final int MAX_KEY_CODE = 255;
     private final Player[] players;
     int[] keyMap = new int[MAX_KEY_CODE + 1];
     int[] keyToSlot = new int[MAX_KEY_CODE + 1];
-    Env env;
+    private final Logger logger;
 
-    public InputManager(Env env, Player[] players) {
+    public InputManager(Logger logger, Config config, Player[] players) {
         this.players = players;
-        this.env = env;
-        
+        this.logger = logger;
+
         // initialize the keys
-        for (int player = 0; player < env.config.players; ++player)
-            for (int i = 0; i < env.config.playerKeys(player).length; i++) {
-                int keyCode = env.config.playerKeys(player)[i];
+        for (int player = 0; player < config.players; ++player)
+            for (int i = 0; i < config.playerKeys(player).length; i++) {
+                int keyCode = config.playerKeys(player)[i];
+                if (keyCode >= keyMap.length) reallocArrays(keyCode); // enlarge the array for higher key codes
                 keyMap[keyCode] = player + 1; // 1 for first player and 2 for second player
                 keyToSlot[keyCode] = i;
             }
+    }
+
+    private void reallocArrays(int keyCode) {
+        keyMap = Arrays.copyOf(keyMap, keyCode + 1);
+        keyToSlot = Arrays.copyOf(keyToSlot, keyCode + 1);
     }
 
     @Override
@@ -36,7 +43,7 @@ class InputManager extends KeyAdapter {
         int keyCode = e.getKeyCode();
         int player = keyMap[keyCode] - 1;
         if (player >= 0){
-            env.logger.log(Level.SEVERE, "Key " + keyCode + " was pressed by player " + player);
+            logger.severe("key " + keyCode + " was pressed by player " + (player + 1));
             players[player].keyPressed(keyToSlot[keyCode]);
         }
     }

@@ -3,6 +3,7 @@ package bguspl.set;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 
 /**
@@ -87,5 +88,12 @@ public class UtilImpl implements Util {
             for (int i = t + 1; i < r; i++) combination[i] = combination[i - 1] + 1;
         }
         return sets;
+    }
+
+    public void spin() {
+        if (config.randomSpinMax <= 0) return;
+        long cycles = ThreadLocalRandom.current().nextLong(config.randomSpinMin, config.randomSpinMax);
+        for (int i = 0; i < cycles; ++i)
+            Thread.yield();
     }
 }
