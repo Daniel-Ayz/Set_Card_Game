@@ -2,6 +2,7 @@ package bguspl.set.ex;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 
 import bguspl.set.Env;
@@ -58,6 +59,8 @@ public class Player implements Runnable {
 
     private Dealer dealer;
 
+    private boolean canPlay;
+
     /**
      * The class constructor.
      *
@@ -74,6 +77,7 @@ public class Player implements Runnable {
         this.human = human;
         this.dealer = dealer;
         keyPressed = new ArrayBlockingQueue<Integer>(3);
+        canPlay = false;
     }
 
     /**
@@ -86,9 +90,7 @@ public class Player implements Runnable {
         if (!human) createArtificialIntelligence();
 
         while (!terminate) {
-            //if dealer is shuffling go to sleep(wait)
-            //after end of sleep - clear key queue
-            PlaceRemoveToken();
+            waitUntilCanPlay();
         }
         if (!human) try { aiThread.join(); } catch (InterruptedException ignored) {}
         env.logger.log(Level.INFO, "Thread " + Thread.currentThread().getName() + " terminated.");
@@ -176,5 +178,25 @@ public class Player implements Runnable {
 
     public int getScore() {
         return score;
+    }
+
+    public synchronized void blockPlay(){
+        canPlay = false;
+    }
+
+    public synchronized void resumePlay(){
+        canPlay = true;
+        notifyAll();
+    }
+
+    private synchronized void waitUntilCanPlay(){
+        while(!canPlay){
+            try{
+                wait();
+                keyPressed.clear();
+            }
+            catch (InterruptedException ignored){}
+        }
+        PlaceRemoveToken();
     }
 }

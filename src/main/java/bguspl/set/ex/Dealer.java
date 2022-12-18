@@ -4,6 +4,7 @@ import bguspl.set.Env;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -41,7 +42,7 @@ public class Dealer implements Runnable {
 
     private ConcurrentLinkedQueue<Integer> playerWithSet;
 
-    private volatile boolean dealerShuffle;
+    private Thread[] playersThreads;
 
 
     public Dealer(Env env, Table table, Player[] players) {
@@ -49,7 +50,6 @@ public class Dealer implements Runnable {
         this.table = table;
         this.players = players;
         deck = IntStream.range(0, env.config.deckSize).boxed().collect(Collectors.toList());
-        dealerShuffle = false;
        /* if(env.config.turnTimeoutMillis > 0){
             reshuffleTime = System.currentTimeMillis() + env.config.turnTimeoutMillis;
         }
@@ -67,6 +67,11 @@ public class Dealer implements Runnable {
     @Override
     public void run() {
         env.logger.log(Level.INFO, "Thread " + Thread.currentThread().getName() + " starting.");
+        playersThreads = new Thread[env.config.players];
+        for(int i=0; i<playersThreads.length;i++){
+            playersThreads[i] = new Thread(players[i]);
+            playersThreads[i].start();
+        }
         while (!shouldFinish()) {
             placeCardsOnTable();
             timerLoop();
@@ -85,8 +90,10 @@ public class Dealer implements Runnable {
         long timeFromStartMillis = System.currentTimeMillis();
         reshuffleTime = timeFromStartMillis + env.config.turnTimeoutMillis;
         while (!terminate && System.currentTimeMillis() < reshuffleTime) {
+            resumePlay();
             sleepUntilWokenOrTimeout();
             updateTimerDisplay(false, reshuffleTime - System.currentTimeMillis());
+            stopPlay();
             checkSet();
             placeCardsOnTable();
         }
@@ -146,8 +153,16 @@ public class Dealer implements Runnable {
         }
     }
 
-    private void setDealerShuffle(boolean shuffleState){
-        dealerShuffle = shuffleState;
+    private void stopPlay(){
+        for(Player player: players){
+            player.blockPlay();
+        }
+    }
+
+    private void resumePlay(){
+        for(Player player: players){
+            player.resumePlay();
+        }
     }
 
     /**
@@ -206,4 +221,5 @@ public class Dealer implements Runnable {
     public void enterPlayerWithSet(int playerId){
         playerWithSet.add(playerId);
     }
+
 }
