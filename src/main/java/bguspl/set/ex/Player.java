@@ -91,6 +91,7 @@ public class Player implements Runnable {
 
         while (!terminate) {
             waitUntilCanPlay();
+            PlaceRemoveToken();
         }
         if (!human) try { aiThread.join(); } catch (InterruptedException ignored) {}
         env.logger.log(Level.INFO, "Thread " + Thread.currentThread().getName() + " terminated.");
@@ -135,7 +136,9 @@ public class Player implements Runnable {
                     table.placeToken(id, slot);
                     if(tokenCount == 2){
                         dealer.enterPlayerWithSet(id);
-                        dealer.notifyAll();
+                        synchronized (dealer){
+                            dealer.notifyAll();
+                        }
                     }
                 }
             }
@@ -186,17 +189,16 @@ public class Player implements Runnable {
 
     public synchronized void resumePlay(){
         canPlay = true;
-        notifyAll();
+        this.notifyAll();
     }
 
     private synchronized void waitUntilCanPlay(){
         while(!canPlay){
             try{
-                wait();
+                this.wait();
                 keyPressed.clear();
             }
             catch (InterruptedException ignored){}
         }
-        PlaceRemoveToken();
     }
 }

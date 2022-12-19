@@ -50,6 +50,7 @@ public class Dealer implements Runnable {
         this.table = table;
         this.players = players;
         deck = IntStream.range(0, env.config.deckSize).boxed().collect(Collectors.toList());
+        playerWithSet = new ConcurrentLinkedQueue<>();
        /* if(env.config.turnTimeoutMillis > 0){
             reshuffleTime = System.currentTimeMillis() + env.config.turnTimeoutMillis;
         }
@@ -105,6 +106,9 @@ public class Dealer implements Runnable {
     public void terminate() {
         // TODO implement
         terminate = true;
+        for(Player player: players){
+            player.terminate();
+        }
     }
 
     /**
@@ -123,15 +127,17 @@ public class Dealer implements Runnable {
         // TODO implement
         if(!playerWithSet.isEmpty()) {
             Integer playerId = playerWithSet.remove();
-            List<Integer> set = table.getSet(playerId);
+            List<Integer> set = table.getSetAsSlots(playerId);
             if(set.size() == 3){
                 //if the set is correct
-                if(env.util.testSet(set.stream().mapToInt(Integer::intValue).toArray())){
-                    for(int slot: set){
+                if(env.util.testSet(table.getSetAsCards(playerId))){
+                    System.out.println("correct set");
+                    for(Integer slot: set){
                         table.removeCard(slot);
-                        for(Player player: players){
+                        /*for(Player player: players){
                             table.removeToken(player.id, slot);
-                        }
+                        }*/
+                        table.removeTokensFromSlot(slot);
                     }
                     //freeze and increment score
                 }
@@ -193,9 +199,8 @@ public class Dealer implements Runnable {
     private void removeAllCardsFromTable() {
         // TODO implement
         Integer[] cards = table.removeAllCardsAndReturn();
-        for(Integer card: cards){
-            deck.add(card);
-        }
+        deck.addAll(Arrays.asList(cards));
+        table.clearAllTokens();
     }
 
     private void shuffleDeck(){

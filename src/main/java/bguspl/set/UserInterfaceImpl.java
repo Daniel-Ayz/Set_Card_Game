@@ -219,7 +219,7 @@ public class UserInterfaceImpl extends JFrame implements UserInterface {
 
         private PlayersPanel() {
             this.setLayout(new GridLayout(2, config.players));
-            this.setPreferredSize(new Dimension(config.players * config.PlayerCellWidth, config.rows * config.PlayerCellHeight));
+            this.setPreferredSize(new Dimension(config.players * config.playerCellWidth, config.rows * config.playerCellHeight));
             this.playersTable = new JLabel[2][config.players];
             for (int i = 0; i < config.players; i++) {
                 this.playersTable[0][i] = new JLabel(config.playerNames[i]);

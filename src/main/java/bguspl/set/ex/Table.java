@@ -127,9 +127,9 @@ public class Table {
     public Integer[] removeAllCardsAndReturn(){
         Integer[] cards = new Integer[countCards()];
         int i = 0;
-        for(Integer slot:slotToCard){
-            if(slot != null){
-                cards[i++] = removeCard(slot);
+        for(Integer card:slotToCard){
+            if(card != null){
+                cards[i++] = removeCard(cardToSlot[card]);
             }
         }
         return cards;
@@ -174,6 +174,20 @@ public class Table {
         return false;
     }
 
+    public void removeTokensFromSlot(Integer slot){
+        for(List<Integer> list: playerTokens){
+            list.remove(slot);
+        }
+        env.ui.removeTokens(slot);
+    }
+
+    public void clearAllTokens(){
+        for(List list: playerTokens){
+            list.clear();
+        }
+        env.ui.removeTokens();
+    }
+
     public boolean checkToken(int player, int slot){
         return playerTokens[player].contains(slot);
     }
@@ -182,7 +196,11 @@ public class Table {
         return playerTokens[player].size();
     }
 
-    public List<Integer> getSet(int playerId){
-        return playerTokens[playerId];
+    public List<Integer> getSetAsSlots(int playerId){
+        return new ArrayList<>(playerTokens[playerId]);
+    }
+
+    public int[] getSetAsCards(int playerId){
+        return playerTokens[playerId].stream().mapToInt(num -> slotToCard[num]).toArray();
     }
 }
