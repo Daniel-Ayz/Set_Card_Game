@@ -152,7 +152,7 @@ public class Table {
      */
     public void placeToken(int player, int slot) {
         // TODO implement
-        if(tokenCount(player) < 3){
+        if(tokenCount(player) < 3 && slotToCard[slot]!=null){
             playerTokens[player].add(slot);
             env.ui.placeToken(player, slot);
         }
@@ -201,6 +201,11 @@ public class Table {
     }
 
     public int[] getSetAsCards(int playerId){
-        return playerTokens[playerId].stream().mapToInt(num -> slotToCard[num]).toArray();
+        for(Integer i: playerTokens[playerId])
+            if(i == null){
+                System.out.println("there is a null");
+                System.out.println(playerTokens[playerId]);
+            }
+        return playerTokens[playerId].stream().filter(Objects::nonNull).mapToInt(slot -> slotToCard[slot]).toArray();
     }
 }

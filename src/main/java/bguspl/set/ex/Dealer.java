@@ -44,6 +44,7 @@ public class Dealer implements Runnable {
 
     private Thread[] playersThreads;
 
+    private long[] playersFreezeTimes;
 
     public Dealer(Env env, Table table, Player[] players) {
         this.env = env;
@@ -51,6 +52,8 @@ public class Dealer implements Runnable {
         this.players = players;
         deck = IntStream.range(0, env.config.deckSize).boxed().collect(Collectors.toList());
         playerWithSet = new ConcurrentLinkedQueue<>();
+        reshuffleTime = System.currentTimeMillis() + env.config.turnTimeoutMillis;
+        playersFreezeTimes = new long[env.config.players];
        /* if(env.config.turnTimeoutMillis > 0){
             reshuffleTime = System.currentTimeMillis() + env.config.turnTimeoutMillis;
         }
@@ -70,17 +73,27 @@ public class Dealer implements Runnable {
         env.logger.log(Level.INFO, "Thread " + Thread.currentThread().getName() + " starting.");
         playersThreads = new Thread[env.config.players];
         for(int i=0; i<playersThreads.length;i++){
-            playersThreads[i] = new Thread(players[i]);
+            playersThreads[i] = new Thread(players[i], "player "+i+" Thread ");
             playersThreads[i].start();
         }
         while (!shouldFinish()) {
             placeCardsOnTable();
+            updateTimerDisplay(true);
             timerLoop();
-            updateTimerDisplay(true, env.config.turnTimeoutMillis);
+            updateTimerDisplay(true);
             removeAllCardsFromTable();
             shuffleDeck();
         }
         announceWinners();
+        for(Player player: players){
+            player.terminate();
+        }
+        for(Thread t: playersThreads){
+            try {
+//                t.interrupt();
+                t.join();
+            } catch (InterruptedException e) {}
+        }
         env.logger.log(Level.INFO, "Thread " + Thread.currentThread().getName() + " terminated.");
     }
 
@@ -88,12 +101,11 @@ public class Dealer implements Runnable {
      * The inner loop of the dealer thread that runs as long as the countdown did not time out.
      */
     private void timerLoop() {
-        long timeFromStartMillis = System.currentTimeMillis();
-        reshuffleTime = timeFromStartMillis + env.config.turnTimeoutMillis;
         while (!terminate && System.currentTimeMillis() < reshuffleTime) {
             resumePlay();
             sleepUntilWokenOrTimeout();
-            updateTimerDisplay(false, reshuffleTime - System.currentTimeMillis());
+            updateTimerDisplay(false);
+            updatePlayersFreezeTime();
             stopPlay();
             checkSet();
             placeCardsOnTable();
@@ -106,9 +118,6 @@ public class Dealer implements Runnable {
     public void terminate() {
         // TODO implement
         terminate = true;
-        for(Player player: players){
-            player.terminate();
-        }
     }
 
     /**
@@ -128,10 +137,11 @@ public class Dealer implements Runnable {
         if(!playerWithSet.isEmpty()) {
             Integer playerId = playerWithSet.remove();
             List<Integer> set = table.getSetAsSlots(playerId);
-            if(set.size() == 3){
+            int[] setAsArray = table.getSetAsCards(playerId);
+            if(set.size() == 3 && setAsArray.length ==3){
                 //if the set is correct
-                if(env.util.testSet(table.getSetAsCards(playerId))){
-                    System.out.println("correct set");
+                if(env.util.testSet(setAsArray)){
+                    updateTimerDisplay(true);
                     for(Integer slot: set){
                         table.removeCard(slot);
                         /*for(Player player: players){
@@ -140,10 +150,14 @@ public class Dealer implements Runnable {
                         table.removeTokensFromSlot(slot);
                     }
                     //freeze and increment score
+                    players[playerId].point();
+                    freezePlayer(playerId, env.config.pointFreezeMillis);
                 }
                 //false set
                 else{
                     //penalty time
+                    players[playerId].penalty();
+                    freezePlayer(playerId, env.config.penaltyFreezeMillis);
                 }
             }
         }
@@ -178,7 +192,8 @@ public class Dealer implements Runnable {
         // TODO implement
         synchronized (this){
             try {
-                wait(800);
+                if(reshuffleTime - System.currentTimeMillis() >= env.config.turnTimeoutWarningMillis + 1000)
+                    wait(50);
             }
             catch(InterruptedException ex){}
         }
@@ -187,10 +202,12 @@ public class Dealer implements Runnable {
     /**
      * Reset and/or update the countdown and the countdown display.
      */
-    private void updateTimerDisplay(boolean reset, long timeLeftMillis) {
+    private void updateTimerDisplay(boolean reset) {
         // TODO implement
-        // what is da diff reset == true/false?
-        env.ui.setCountdown(timeLeftMillis, timeLeftMillis < env.config.turnTimeoutWarningMillis);
+        if (reset)
+            reshuffleTime = System.currentTimeMillis() + env.config.turnTimeoutMillis;
+        long timeLeft = reshuffleTime - System.currentTimeMillis();
+        env.ui.setCountdown(timeLeft, timeLeft <= env.config.turnTimeoutWarningMillis);
     }
 
     /**
@@ -225,6 +242,26 @@ public class Dealer implements Runnable {
 
     public void enterPlayerWithSet(int playerId){
         playerWithSet.add(playerId);
+    }
+
+    private void updatePlayersFreezeTime(){
+        int index = 0;
+        for(long freezeTime: playersFreezeTimes){
+            long freezeTimeLeft = freezeTime - System.currentTimeMillis();
+            if(players[index].isFreeze() && freezeTimeLeft <= 0)
+                removeFreezePlayer(index);
+            env.ui.setFreeze(index, freezeTimeLeft);
+            index++;
+        }
+    }
+
+    private void freezePlayer(int playerId, long millisFreeze){
+        players[playerId].freezePlay();
+        playersFreezeTimes[playerId] = System.currentTimeMillis() + millisFreeze;
+    }
+
+    private void removeFreezePlayer(int playerId){
+        players[playerId].unfreezePlay();
     }
 
 }

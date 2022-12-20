@@ -61,6 +61,8 @@ public class Player implements Runnable {
 
     private boolean canPlay;
 
+    private boolean isFreeze;
+
     /**
      * The class constructor.
      *
@@ -93,6 +95,7 @@ public class Player implements Runnable {
             waitUntilCanPlay();
             PlaceRemoveToken();
         }
+        System.out.println("therminated " + id);
         if (!human) try { aiThread.join(); } catch (InterruptedException ignored) {}
         env.logger.log(Level.INFO, "Thread " + Thread.currentThread().getName() + " terminated.");
     }
@@ -107,9 +110,10 @@ public class Player implements Runnable {
             env.logger.log(Level.INFO, "Thread " + Thread.currentThread().getName() + " starting.");
             while (!terminate) {
                 // TODO implement player key press simulator
-                try {
-                    synchronized (this) { wait(); }
-                } catch (InterruptedException ignored) {}
+                keyPressed((int)(Math.random() * 12));
+//                try {
+//                    synchronized (this) { wait(); }
+//                } catch (InterruptedException ignored) {}
             }
             env.logger.log(Level.INFO, "Thread " + Thread.currentThread().getName() + " terminated.");
         }, "computer-" + id);
@@ -119,29 +123,37 @@ public class Player implements Runnable {
     /**
      * Called when the game should be terminated due to an external event.
      */
-    public void terminate() {
+    public synchronized void terminate() {
         // TODO implement
         terminate = true;
+        notifyAll();
+        keyPressed(0);
     }
 
     private void PlaceRemoveToken(){
         try{
             Integer slot = keyPressed.take();
-            if(table.checkToken(id,slot)) {
-                table.removeToken(id, slot);
-            }
-            else{
-                int tokenCount = table.tokenCount(id);
-                if(tokenCount < 3) {
-                    table.placeToken(id, slot);
-                    if(tokenCount == 2){
-                        dealer.enterPlayerWithSet(id);
-                        synchronized (dealer){
-                            dealer.notifyAll();
+            synchronized (this){
+                if(canPlay && !isFreeze){
+                    if(table.checkToken(id,slot)) {
+                        table.removeToken(id, slot);
+                    }
+                    else{
+                        int tokenCount = table.tokenCount(id);
+                        if(tokenCount < 3) {
+                            table.placeToken(id, slot);
+                            if(tokenCount == 2){
+                                dealer.enterPlayerWithSet(id);
+                                synchronized (dealer){
+                                    dealer.notifyAll();
+                                    blockPlay();
+                                }
+                            }
                         }
                     }
                 }
             }
+
         }
         catch(InterruptedException ex){};
     }
@@ -167,7 +179,8 @@ public class Player implements Runnable {
      */
     public void point() {
         // TODO implement
-
+        //freeze time
+        //print freeze
         int ignored = table.countCards(); // this part is just for demonstration in the unit tests
         env.ui.setScore(id, ++score);
     }
@@ -177,6 +190,8 @@ public class Player implements Runnable {
      */
     public void penalty() {
         // TODO implement
+        //penalty time
+        //print penalty
     }
 
     public int getScore() {
@@ -187,13 +202,26 @@ public class Player implements Runnable {
         canPlay = false;
     }
 
+    public synchronized void freezePlay(){
+        isFreeze = true;
+    }
+
     public synchronized void resumePlay(){
         canPlay = true;
         this.notifyAll();
     }
 
+    public synchronized void unfreezePlay(){
+        isFreeze = false;
+        this.notifyAll();
+    }
+
+    public boolean isFreeze(){
+        return isFreeze;
+    }
+
     private synchronized void waitUntilCanPlay(){
-        while(!canPlay){
+        while(!canPlay || isFreeze){
             try{
                 this.wait();
                 keyPressed.clear();
