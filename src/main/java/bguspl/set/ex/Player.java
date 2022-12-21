@@ -95,7 +95,6 @@ public class Player implements Runnable {
             waitUntilCanPlay();
             PlaceRemoveToken();
         }
-        System.out.println("therminated " + id);
         if (!human) try { aiThread.join(); } catch (InterruptedException ignored) {}
         env.logger.log(Level.INFO, "Thread " + Thread.currentThread().getName() + " terminated.");
     }
@@ -126,8 +125,11 @@ public class Player implements Runnable {
     public synchronized void terminate() {
         // TODO implement
         terminate = true;
+        canPlay = true;
+        isFreeze = false;
         notifyAll();
-        keyPressed(0);
+        if(keyPressed.size() != 3)
+            keyPressed(0);
     }
 
     private void PlaceRemoveToken(){

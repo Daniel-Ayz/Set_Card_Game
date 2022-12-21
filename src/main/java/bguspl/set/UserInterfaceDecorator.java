@@ -16,7 +16,7 @@ public class UserInterfaceDecorator implements UserInterface {
         this.logger = logger;
         this.util = util;
 
-        if (ui == null) System.out.println("Running without a user interface. Check logs.");
+        if (ui == null) System.out.println("running without a user interface. Check logs.");
     }
 
     @Override

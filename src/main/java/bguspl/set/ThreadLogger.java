@@ -17,8 +17,11 @@ public class ThreadLogger extends Thread {
     }
 
     public void joinWithLog() throws InterruptedException {
-        join();
-        logStop(logger, getName());
+        try {
+            join();
+        } finally {
+            logStop(logger, getName());
+        }
     }
 
     public static void logStart(Logger logger, String name) {

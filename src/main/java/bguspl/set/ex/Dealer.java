@@ -77,20 +77,20 @@ public class Dealer implements Runnable {
             playersThreads[i].start();
         }
         while (!shouldFinish()) {
+//            shuffleDeck();
             placeCardsOnTable();
             updateTimerDisplay(true);
             timerLoop();
             updateTimerDisplay(true);
             removeAllCardsFromTable();
-            shuffleDeck();
         }
-        announceWinners();
+        if(!terminate)
+            announceWinners();
         for(Player player: players){
             player.terminate();
         }
         for(Thread t: playersThreads){
             try {
-//                t.interrupt();
                 t.join();
             } catch (InterruptedException e) {}
         }

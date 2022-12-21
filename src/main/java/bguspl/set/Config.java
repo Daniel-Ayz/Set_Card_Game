@@ -160,7 +160,7 @@ public class Config {
         Properties properties = new Properties();
 
         if (filename == null || filename.isEmpty())
-            logger.severe("Running with default configuration.");
+            logger.severe("running with default configuration.");
         else try (InputStream is = Files.newInputStream(Paths.get(filename))) {
             properties.load(is);
         } catch (IOException e) {
