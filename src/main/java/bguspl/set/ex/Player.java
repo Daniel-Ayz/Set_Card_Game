@@ -1,8 +1,6 @@
 package bguspl.set.ex;
 
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 
 import bguspl.set.Env;
@@ -109,7 +107,7 @@ public class Player implements Runnable {
             env.logger.log(Level.INFO, "Thread " + Thread.currentThread().getName() + " starting.");
             while (!terminate) {
                 // TODO implement player key press simulator
-                keyPressed((int)(Math.random() * 12));
+                keyPressed((int)(Math.random() * env.config.tableSize));
 //                try {
 //                    synchronized (this) { wait(); }
 //                } catch (InterruptedException ignored) {}
@@ -230,5 +228,10 @@ public class Player implements Runnable {
             }
             catch (InterruptedException ignored){}
         }
+    }
+
+    public ArrayBlockingQueue<Integer> getQueue(){
+        //for testing
+        return keyPressed;
     }
 }

@@ -4,7 +4,6 @@ import bguspl.set.Env;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -77,7 +76,7 @@ public class Dealer implements Runnable {
             playersThreads[i].start();
         }
         while (!shouldFinish()) {
-//            shuffleDeck();
+            shuffleDeck();
             placeCardsOnTable();
             updateTimerDisplay(true);
             timerLoop();
@@ -166,7 +165,7 @@ public class Dealer implements Runnable {
     /**
      * Check if any cards can be removed from the deck and placed on the table.
      */
-    private void placeCardsOnTable() {
+    public void placeCardsOnTable() {
         List<Integer> emptySlots = table.getEmptySlots();
         while(!deck.isEmpty() && !emptySlots.isEmpty()){
                 table.placeCard(deck.remove(0), emptySlots.remove(0));
@@ -255,13 +254,18 @@ public class Dealer implements Runnable {
         }
     }
 
-    private void freezePlayer(int playerId, long millisFreeze){
+    public void freezePlayer(int playerId, long millisFreeze){
         players[playerId].freezePlay();
         playersFreezeTimes[playerId] = System.currentTimeMillis() + millisFreeze;
     }
 
-    private void removeFreezePlayer(int playerId){
+    public void removeFreezePlayer(int playerId){
         players[playerId].unfreezePlay();
+    }
+
+    public List<Integer> getDeck(){
+        // for testing
+        return deck;
     }
 
 }

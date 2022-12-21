@@ -5,12 +5,14 @@ import bguspl.set.Env;
 import bguspl.set.UserInterface;
 import bguspl.set.Util;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -69,5 +71,21 @@ class PlayerTest {
 
         // check that ui.setScore was called with the player's id and the correct score
         verify(ui).setScore(eq(player.id), eq(expectedScore));
+    }
+
+    @Test
+    void freezeTest(){
+        player.freezePlay();
+        assertEquals(true, player.isFreeze());
+        player.unfreezePlay();
+        assertEquals(false,player.isFreeze());
+    }
+
+    @Test
+    void queueTest(){
+        ArrayBlockingQueue<Integer> queue = player.getQueue();
+        Assertions.assertEquals(0,queue.size());
+        player.keyPressed(0);
+        Assertions.assertEquals(1,queue.size());
     }
 }

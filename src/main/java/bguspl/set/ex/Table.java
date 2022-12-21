@@ -47,6 +47,10 @@ public class Table {
         this.env = env;
         this.slotToCard = slotToCard;
         this.cardToSlot = cardToSlot;
+        playerTokens = new ArrayList[env.config.players];
+        for(int i=0; i<playerTokens.length;i++){
+            playerTokens[i] = new ArrayList<>(3);
+        }
     }
 
     /**
@@ -56,10 +60,7 @@ public class Table {
      */
     public Table(Env env) {
         this(env, new Integer[env.config.tableSize], new Integer[env.config.deckSize]);
-        playerTokens = new ArrayList[env.config.players];
-        for(int i=0; i<playerTokens.length;i++){
-            playerTokens[i] = new ArrayList<>(3);
-        }
+
     }
 
     /**

@@ -4,6 +4,7 @@ import bguspl.set.Config;
 import bguspl.set.Env;
 import bguspl.set.UserInterface;
 import bguspl.set.Util;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -93,6 +94,29 @@ class TableTest {
     void placeCard_AllSlotsAreFilled() throws InterruptedException {
         fillAllSlots();
         placeSomeCardsAndAssert();
+    }
+
+    @Test
+    void placeToken(){
+        table.placeCard(0,0);
+        table.placeToken(0,0);
+        Assertions.assertEquals(true, table.checkToken(0,0));
+        Assertions.assertEquals(1, table.tokenCount(0));
+    }
+
+    @Test
+    void placeTokenFail(){
+        table.placeCard(0,0);
+        table.placeCard(1,1);
+        table.placeCard(2,2);
+        table.placeCard(3,3);
+
+        table.placeToken(0,0);
+        table.placeToken(0,1);
+        table.placeToken(0,2);
+        table.placeToken(0, 3);
+        Assertions.assertEquals(false, table.checkToken(0,3));
+        Assertions.assertEquals(3, table.tokenCount(0));
     }
 
     static class MockUserInterface implements UserInterface {
