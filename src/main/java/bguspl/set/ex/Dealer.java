@@ -79,6 +79,7 @@ public class Dealer implements Runnable {
             shuffleDeck();
             placeCardsOnTable();
             updateTimerDisplay(true);
+            resumePlay();
             timerLoop();
             updateTimerDisplay(true);
             removeAllCardsFromTable();
@@ -101,11 +102,11 @@ public class Dealer implements Runnable {
      */
     private void timerLoop() {
         while (!terminate && System.currentTimeMillis() < reshuffleTime) {
-            resumePlay();
+            //resumePlay();
             sleepUntilWokenOrTimeout();
             updateTimerDisplay(false);
             updatePlayersFreezeTime();
-            stopPlay();
+            //stopPlay();
             checkSet();
             placeCardsOnTable();
         }
@@ -159,6 +160,7 @@ public class Dealer implements Runnable {
                     freezePlayer(playerId, env.config.penaltyFreezeMillis);
                 }
             }
+            players[playerId].resumePlay();
         }
     }
 
@@ -247,16 +249,18 @@ public class Dealer implements Runnable {
         int index = 0;
         for(long freezeTime: playersFreezeTimes){
             long freezeTimeLeft = freezeTime - System.currentTimeMillis();
-            if(players[index].isFreeze() && freezeTimeLeft <= 0)
-                removeFreezePlayer(index);
+//            if(players[index].isFreeze() && freezeTimeLeft <= 0)
+//                removeFreezePlayer(index);
             env.ui.setFreeze(index, freezeTimeLeft);
             index++;
         }
     }
 
     public void freezePlayer(int playerId, long millisFreeze){
-        players[playerId].freezePlay();
-        playersFreezeTimes[playerId] = System.currentTimeMillis() + millisFreeze;
+        if(millisFreeze != 0){
+            players[playerId].freezePlay(System.currentTimeMillis() + millisFreeze);
+            playersFreezeTimes[playerId] = System.currentTimeMillis() + millisFreeze;
+        }
     }
 
     public void removeFreezePlayer(int playerId){

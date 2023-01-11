@@ -61,6 +61,8 @@ public class Player implements Runnable {
 
     private boolean isFreeze;
 
+    private long freezeTime;
+
     /**
      * The class constructor.
      *
@@ -78,6 +80,7 @@ public class Player implements Runnable {
         this.dealer = dealer;
         keyPressed = new ArrayBlockingQueue<Integer>(3);
         canPlay = false;
+        freezeTime = 0;
     }
 
     /**
@@ -125,6 +128,7 @@ public class Player implements Runnable {
         terminate = true;
         canPlay = true;
         isFreeze = false;
+        freezeTime = 0;
         notifyAll();
         if(keyPressed.size() != 3)
             keyPressed(0);
@@ -202,8 +206,9 @@ public class Player implements Runnable {
         canPlay = false;
     }
 
-    public synchronized void freezePlay(){
+    public synchronized void freezePlay(long freezeTime){
         isFreeze = true;
+        this.freezeTime = freezeTime;
     }
 
     public synchronized void resumePlay(){
@@ -223,7 +228,15 @@ public class Player implements Runnable {
     private synchronized void waitUntilCanPlay(){
         while(!canPlay || isFreeze){
             try{
-                this.wait();
+                if(freezeTime == 0)
+                    this.wait();
+                else{
+                    while(System.currentTimeMillis() < freezeTime){
+                        this.wait(freezeTime - System.currentTimeMillis());
+                    }
+                    freezeTime = 0;
+                    unfreezePlay();
+                }
                 keyPressed.clear();
             }
             catch (InterruptedException ignored){}
