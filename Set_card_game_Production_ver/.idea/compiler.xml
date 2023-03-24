@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="Set_Card_Game" />
+        <module name="Set_Card_Game-78e222420330dd1ac39e3f69f80d9cebb02d46ba" />
+      </profile>
+    </annotationProcessing>
+  </component>
+</project>
