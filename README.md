@@ -15,3 +15,7 @@ Doesn't work?
 -> run the file via cmd command:
 1. java -jar SetGame_2Players.jar
 2. java -jar SetGame_4AI_Players.jar
+
+![Screenshot](Screenshot1.png)
+![Screenshot](Screenshot2.png)
+![Screenshot](Screenshot3.png)
